@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ProductProps } from '../../../../types/product-type';
 import Link from 'next/link';
 import { useCartStore } from '@/store/useCartStore';
+import { useToast } from '@/hooks/use-toast';
 
 const classificacoes = {
   P: { min: 9, max: 18 },
@@ -28,6 +29,7 @@ export default function ProductCard({ product }: { product: ProductProps }) {
     setShowOptions(true);
   };
 
+  const {toast } = useToast()
   const handleComprar = (e: React.MouseEvent) => {
     e.preventDefault();
     const selectedVariant = product.variants.find(
@@ -39,9 +41,13 @@ export default function ProductCard({ product }: { product: ProductProps }) {
         variants: [selectedVariant], // Apenas a variante selecionada
         price: selectedVariant.price, // Preço da variante selecionada
       };
+      toast({
+        title:"Produto adicionado ao carrinho",
+        description:"Produto adicionado ao carrinho com sucesso"
+        
+      })
       addItem(itemToAdd, quantity, selectedSize);
-      setShowOptions(false);
-    } else {
+     } else {
       // Tratar o caso em que nenhuma variante é encontrada
       console.error("Nenhuma variante encontrada para a seleção atual");
       // Você pode adicionar uma notificação para o usuário aqui
@@ -69,7 +75,7 @@ export default function ProductCard({ product }: { product: ProductProps }) {
       setPriceChanged(true);
       setTimeout(() => setPriceChanged(false), 500); // Reset the animation state after 500ms
     }
-  }, [selectedSize, selectedClassificacao, product.variants]);
+  }, [selectedSize, selectedClassificacao, product.variants, currentPrice]);
 
   const handleSelectSize = (size: string) => {
     setSelectedSize(size);
@@ -171,7 +177,7 @@ export default function ProductCard({ product }: { product: ProductProps }) {
               className="absolute top-0 left-0 right-0 bottom-0 bg-white p-6 rounded-lg shadow-lg overflow-y-auto"
             >
               <button 
-                onClick={handleComprar}
+                onClick={() => setShowOptions(false)}
                 className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               >
                 ✕

@@ -33,7 +33,7 @@ export default function SuporteOurofino() {
       return () => clearInterval(autoOpenInterval);
     }
 
-  }, []);
+  }, [hasMinimized]);
 
   useEffect(() => {
     const getTypeUser = async () => {

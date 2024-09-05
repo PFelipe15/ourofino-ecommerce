@@ -3,16 +3,13 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import {
   ClerkProvider,
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
 } from '@clerk/nextjs'
 const inter = Inter({ subsets: ["latin"] });
 import { ptBR } from "@clerk/localizations";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from "@/components/layout/header";
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: "Ourofino - Alianças ",
@@ -32,7 +29,7 @@ export default function RootLayout({
 
         <body className={inter.className}>
       <Header />
-        <ToastContainer />
+      <Toaster />
 
           {children}
         </body>

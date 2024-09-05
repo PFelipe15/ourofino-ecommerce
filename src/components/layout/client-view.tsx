@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import React, { useState, useEffect, SetStateAction } from "react";
+import React, { useState, useEffect, SetStateAction, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
 import { SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
@@ -13,6 +13,11 @@ const ClientView = () => {
   const [activeChat, setActiveChat] = useState<null | string>(null);
   const { user } = useUser();
   const [agentActive, setAgentActive] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -25,7 +30,7 @@ const ClientView = () => {
           id: doc.id,
           ...doc.data(),
         }));
-       const typeChatList = chatsList as unknown
+        const typeChatList = chatsList as unknown
         setChats( typeChatList as SetStateAction<Chat[]>);
         if (chatsList.length > 0 && !activeChat) {
           setActiveChat(chatsList[0].id); // Open the first chat by default
@@ -45,6 +50,10 @@ const ClientView = () => {
       fetchChats();
     }
   }, [user, activeChat]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chats]);
 
   const startNewChat = async () => {
     if (!user) return;
@@ -84,7 +93,7 @@ const ClientView = () => {
     await updateDoc(chatRef, {
       status: "closed",
     });
-    if (activeChat === chatId) {
+     if (activeChat === chatId) {
       setActiveChat(null);
     }
   };
@@ -93,6 +102,12 @@ const ClientView = () => {
     if (newMessage.trim() && activeChat) {
       addMessage(activeChat, newMessage, "user");
       setNewMessage(""); // Clear the input field after sending
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && newMessage.trim()) {
+      handleSendMessage();
     }
   };
 
@@ -289,6 +304,7 @@ const ClientView = () => {
                   Enviar
                 </Button>
               </div>
+              <div ref={messagesEndRef} /> {/* Elemento de referência para o scroll */}
             </div>
           )}
         </div>
