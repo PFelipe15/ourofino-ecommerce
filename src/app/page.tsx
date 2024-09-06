@@ -1,16 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { FaShippingFast, FaCreditCard, FaWhatsapp, FaMedal, FaUserShield, FaCog } from 'react-icons/fa';
 import { MdSupportAgent } from 'react-icons/md';
-import Header from "@/components/layout/header";
 import BannerMain from "@/components/layout/banner";
 import Footer from "@/components/layout/footer";
 import ChatBox from "@/components/layout/chatbox-cliente";
  import FeaturedProducts from "@/components/layout/store/featured-products";
 import LinhaProdutos from "@/components/layout/linha-produtos";
-import { Cart } from "@/components/layout/cart";
 
 export default function Home() {
 
@@ -18,8 +15,7 @@ export default function Home() {
     <main className="flex flex-col items-center min-h-screen bg-gray-50 text-gray-800">       
       <BannerMain />
 
-      <Cart  />
- 
+  
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
