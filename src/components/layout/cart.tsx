@@ -1,16 +1,15 @@
 import { useCartStore } from '@/store/useCartStore'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Trash2, MapPin, CreditCard, ArrowLeft, Plus, Minus, Star, User, CheckCircle } from 'lucide-react'
+import { X, ShoppingBag, Trash2, MapPin, CreditCard, ArrowLeft, Plus, Minus, Star, User, CheckCircle, Package, Bell } from 'lucide-react'
 import { useState } from 'react'
 import { ProductProps } from '../../../types/product-type'
 import Image from 'next/image'
 import createOrder from '@/_actions/createOrder'
-import { Order } from '../../../types/order-type'
 import { SignInButton, useUser } from '@clerk/nextjs'
-import { toast } from 'react-toastify'
-import { UserResource } from '@clerk/types';
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '../ui/button'
+import getOrdersByCustomer from '@/_actions/getOrdersByCustomer'
+import { Order } from '../../../types/order-type' // Importe o tipo
  
 interface CartProps {
   isOpen: boolean
@@ -34,6 +33,40 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   const [paymentMethod, setPaymentMethod] = useState('')
   const { toast } = useToast()
   const [orderConfirmed, setOrderConfirmed] = useState(false)
+  const [showOpenOrders, setShowOpenOrders] = useState(false)
+  const [openOrders, setOpenOrders] = useState<OrderCustomer[]>([])
+  const [hasNewOrders, setHasNewOrders] = useState(true) // Novo estado para simular novas notificações
+
+interface OrderCustomer {
+  id: number;
+  order_number: number;
+  fulfillment_status: string;
+  financial_status: string;
+  current_total_price: string;
+  created_at: string;
+  status: string;
+  date: string;
+  total: number;
+}
+
+  const fetchOpenOrders = async () => {
+    try {
+      const response = await getOrdersByCustomer(user?.emailAddresses[0]?.emailAddress || '')
+      const ordersData = response.orders.map((order: OrderCustomer) => ({
+        id: order.order_number.toString(),
+        status: order.fulfillment_status || order.financial_status,
+        total: parseFloat(order.current_total_price),
+        date: new Date(order.created_at).toLocaleDateString()
+      }))
+      setOpenOrders(ordersData)
+    } catch (error) {
+      console.error('Erro ao buscar pedidos em aberto:', error)
+      toast({
+        title: 'Erro ao buscar pedidos',
+        description: 'Não foi possível carregar seus pedidos em aberto.'
+      })
+    }
+  }
 
   const total = items.reduce((sum, item) => sum + parseFloat(item.price) * item.quantity, 0)
 
@@ -169,19 +202,115 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                       )}
                       {isCheckingOut ? 'Finalizar Compra' : 'Seu Carrinho'}
                     </h2>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={onClose}
-                      className="hover:text-gray-200 transition-colors"
-                    >
-                      <X size={24} />
-                    </motion.button>
+                    <div className="flex items-center">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setShowOpenOrders(!showOpenOrders)
+                          if (!showOpenOrders) fetchOpenOrders()
+                          setHasNewOrders(false) // Reseta a notificação quando o usuário vê os pedidos
+                        }}
+                        className="mr-4 hover:text-primary transition-all relative"
+                      >
+                        <Package size={24} />
+                        {hasNewOrders && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                            <Bell size={12} />
+                          </span>
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={onClose}
+                        className="hover:text-primary transition-all"
+                      >
+                        <X size={24} />
+                      </motion.button>
+                    </div>
                   </div>
                 </div>
               
                 <div className="flex-grow p-6 overflow-y-auto">
-                  {!isCheckingOut && (
+                  {showOpenOrders ? (
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                      <h3 className="text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <Package className="mr-2 text-primary" size={24} />
+                        Seus Pedidos em Aberto
+                      </h3>
+                      {openOrders.length === 0 ? (
+                        <div className="text-center py-8">
+                          <ShoppingBag size={48} className="mx-auto text-gray-400 mb-4" />
+                          <p className="text-gray-600">Você não tem pedidos em aberto no momento.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {openOrders.map((order) => (
+                            <motion.div
+                              key={order.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="bg-gray-50 rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-lg font-semibold text-gray-800">Pedido #{order.id}</span>
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                  order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {order.status === 'pending' ? 'Pendente' : order.status}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                <div>
+                                  <strong>Data:</strong> {order.date}
+                                </div>
+                                <div className="text-right">
+                                  <strong>Total:</strong> R$ {order.total.toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="mt-4 flex flex-col gap-2">
+                                <motion.button
+                                  whileHover={{ scale: 1.03 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  className="w-full bg-primary text-white py-2 rounded-md hover:bg-primary-dark transition-colors"
+                                >
+                                  Ver Detalhes
+                                </motion.button>
+                                {order.status === 'pending' && (
+                                  <>
+                                    <motion.button
+                                      whileHover={{ scale: 1.03 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
+                                    >
+                                      Pagar Agora
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.03 }}
+                                      whileTap={{ scale: 0.98 }}
+                                      className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors"
+                                    >
+                                      Cancelar
+                                    </motion.button>
+                                  </>
+                                )}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setShowOpenOrders(false)}
+                        className="mt-6 w-full bg-gray-200 text-gray-800 py-2 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
+                      >
+                        <ArrowLeft size={20} className="mr-2" />
+                        Voltar ao Carrinho
+                      </motion.button>
+                    </div>
+                  ) : (
                     <>
                       {items.length === 0 ? (
                         <motion.div
