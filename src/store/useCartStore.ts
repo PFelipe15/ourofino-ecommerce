@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
 import { ProductProps } from '../../types/product-type'
 
-interface CartItem extends Omit<ProductProps, 'variants'> {
+export interface CartItem extends Omit<ProductProps, 'variants'> {
   quantity: number;
   selectedSize: string;
   price: string; // Preço da variante selecionada

@@ -2,7 +2,7 @@
 import { Order, RootOrder } from "../../types/order-type";
 
 const createOrder = async (order: Order, user: any, address: any): Promise<RootOrder> => {
-	try {
+ 	try {
 		// Verificar se os dados necessários estão presentes
 		if (!user || !address) {
 			throw new Error("Dados de usuário ou endereço ausentes");
@@ -69,7 +69,8 @@ const createOrder = async (order: Order, user: any, address: any): Promise<RootO
 				customer: { id: customerId },
 				financial_status: "pending",
 				fulfillment_status: null,
- 				billing_address: customerData.addresses[0],
+				
+				shipping_address: customerData.addresses[0],
 				phone: customerData.phone
 			}
 		};
@@ -86,18 +87,15 @@ const createOrder = async (order: Order, user: any, address: any): Promise<RootO
 			}
 		);
 
-		
-		if (!orderResponse.ok) {
-			const errorData = await orderResponse.json();
-			throw new Error(`Erro ao criar pedido: ${JSON.stringify(errorData)}`);
-		}
+ 		const orderData = await orderResponse.json();
 
-		const data = await orderResponse.json();
-		return data as RootOrder;
+	console.log(orderData)
+ 
+		return orderData as RootOrder;
 	} catch (error) {
-		console.error("Erro em createOrder:", error);
-		throw error;
-	}
+		throw new Error("Erro ao criar pedido");
+
+		}
 };
 
 export default createOrder;

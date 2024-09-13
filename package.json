@@ -11,6 +11,7 @@
   "dependencies": {
     "@clerk/localizations": "^2.5.8",
     "@clerk/nextjs": "^5.3.1",
+    "@mercadopago/sdk-js": "^0.0.3",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
@@ -29,7 +30,9 @@
     "firebase": "^10.13.0",
     "framer-motion": "^11.3.24",
     "lucide-react": "^0.426.0",
+    "mercadopago": "^2.0.15",
     "next": "14.2.5",
+    "qrcode.react": "^4.0.1",
     "react": "^18",
     "react-dom": "^18",
     "react-firebase-hooks": "^5.1.1",
@@ -44,8 +47,10 @@
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^20",
+    "@types/qrcode.react": "^1.0.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/uuid": "^10.0.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "json-server": "^1.0.0-beta.1",
