@@ -24,6 +24,7 @@ export interface userData {
 
 const getToken = () => process.env.STRAPI_TOKEN;
 
+const HOST = process.env.HOST;
 const handleFetchError = async (response: Response) => {
 	if (!response.ok) {
 		const errorData = await response.json();
@@ -32,8 +33,9 @@ const handleFetchError = async (response: Response) => {
 	}
 }
 const fetchCustomerByEmail = async (email: string | undefined) => {
-	const tokenStrapi = getToken();
-	const response = await fetch(`http://localhost:1337/api/customers?filters[email][$eq]=${email}`, {
+	const HOST = process.env.HOST;
+	const tokenStrapi = process.env.STRAPI_TOKEN;
+	const response = await fetch(`${HOST}/api/customers?filters[email][$eq]=${email}`, {
 		method: 'GET',
 		headers: {
 			"Authorization": `Bearer ${tokenStrapi}`,
@@ -44,7 +46,8 @@ const fetchCustomerByEmail = async (email: string | undefined) => {
 }
 
 const createCustomerInAPI = async (user: userData) => {
-	const tokenStrapi = getToken();
+	const HOST = process.env.HOST;
+	const tokenStrapi = process.env.STRAPI_TOKEN;
 	const response = await fetch('http://localhost:1337/api/customers', {
 		method: 'POST',
 		headers: {
@@ -71,8 +74,9 @@ export const getCustomerOrCreate = async (user: userData): Promise<CustomerData>
 	}
 }
 export const updateCustomer = async (customerId: string, user: userData): Promise<string> => {
-	const tokenStrapi = getToken();
-	const response = await fetch(`http://localhost:1337/api/customers/${customerId}`, {
+	const HOST = process.env.HOST;
+	const tokenStrapi = process.env.STRAPI_TOKEN;
+	const response = await fetch(`${HOST}/api/customers/${customerId}`, {
 		method: 'PUT',
 		headers: {
 			"Authorization": `Bearer ${tokenStrapi}`,

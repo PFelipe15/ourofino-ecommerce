@@ -1,16 +1,26 @@
 'use server'
 
-
-
-
+export interface Collection {
+    id: number;
+    name: string;
+    description: string;
+    slug: string;
+  }
+  
+  export interface Category {
+    id: number;
+    name: string;
+    collections: Collection[];
+  }
 
 export const getCategoriesAndCollections = async () => {
-    const tokenStrapi = process.env.STRAPI_TOKEN;
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
 
-    const response = await fetch(`http://localhost:1337/api/collections?populate=*`, {
+    const response = await fetch(`${HOST}/api/collections?populate=*`, {
         method: 'GET',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
         },
     });
 
@@ -43,25 +53,19 @@ export const getCategoriesAndCollections = async () => {
     return Array.from(categoriesMap.values());
 };
 
-export interface Collection {
-  id: number;
-  name: string;
-  description: string;
-  slug: string;
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  collections: Collection[];
-}
 
 export const getCategoryByName = async (categoryName: string): Promise<Category | null> => {
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+
     const categories = await getCategoriesAndCollections();
     return categories.find(category => category.name.toLowerCase() === categoryName.toLowerCase()) || null;
 };
 
 export const getCollectionByName = async (collectionName: string): Promise<Collection | null> => {
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+
     const categories = await getCategoriesAndCollections();
     for (const category of categories) {
         const collection = category.collections.find(

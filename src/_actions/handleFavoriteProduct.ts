@@ -26,15 +26,16 @@ export interface Attributes {
   customer: any[]
   product: any[]
 }
-
+ 
 export const createFavoriteProduct = async (product_id: number, user: userData) => {
-    const tokenStrapi = process.env.STRAPI_TOKEN;
-
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+    
     // 1. Obter o ID do cliente correspondente ao email
-    const hasCliente = await fetch(`http://localhost:1337/api/customers?filters[email][$eq]=${user.data.email}`, {
+    const hasCliente = await fetch(`${HOST}/api/customers?filters[email][$eq]=${user.data.email}`, {
         method: 'GET',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
         },
     });
 
@@ -46,10 +47,10 @@ export const createFavoriteProduct = async (product_id: number, user: userData) 
         customerId = customer.id
     }
 
-    const favoriteResponse = await fetch('http://localhost:1337/api/favorites', {
+    const favoriteResponse = await fetch(`${HOST}/api/favorites`, {
         method: 'POST',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -74,8 +75,10 @@ export const createFavoriteProduct = async (product_id: number, user: userData) 
     return favoriteResponseData;
 }
 export const deleteFavoriteProduct = async(product_id: number, customer_email: string) => { 
-    const tokenStrapi = process.env.STRAPI_TOKEN;
-
+ 
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+ 
     // 1. Obter o ID do favorito correspondente ao produto e ao cliente
     const query = qs.stringify({
         filters: {
@@ -92,10 +95,10 @@ export const deleteFavoriteProduct = async(product_id: number, customer_email: s
         },
     });
 
-    const favoriteResponse = await fetch(`http://localhost:1337/api/favorites?${query}`, {
+    const favoriteResponse = await fetch(`${HOST}/api/favorites?${query}`, {
         method: 'GET',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
         },
     });
 
@@ -113,10 +116,10 @@ export const deleteFavoriteProduct = async(product_id: number, customer_email: s
     }
 
     // 2. Deletar o favorito usando o ID obtido
-    const deleteResponse = await fetch(`http://localhost:1337/api/favorites/${favoriteId}`, {
+    const deleteResponse = await fetch(`${HOST}/api/favorites/${favoriteId}`, {
         method: 'DELETE',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
         }
     });
 
@@ -130,14 +133,15 @@ export const deleteFavoriteProduct = async(product_id: number, customer_email: s
      return deleteResponseData; 
 }
 export const getFavoriteProducts = async (customer_email: string | undefined) => {
-    const tokenStrapi = process.env.STRAPI_TOKEN;
+    const HOST = process.env.HOST;
+    const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
 
     // 1. Obter os produtos favoritos com populate
-    const favoritesResponse = await fetch(
-        `http://localhost:1337/api/favorites?filters[customer][email][$eq]=${customer_email}&populate=*`,
-        {
-            headers: {
-                "Authorization": `Bearer ${tokenStrapi}`,
+            const favoritesResponse = await fetch(
+                `${HOST}/api/favorites?filters[customer][email][$eq]=${customer_email}&populate=*`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${TOKEN_STRAPI}`,
             },
         }
     );
@@ -168,10 +172,10 @@ export const getFavoriteProducts = async (customer_email: string | undefined) =>
     });
 
     const productsResponse = await fetch(
-        `http://localhost:1337/api/products?${query}&populate=*`, // Usando o populate para obter todas as informações
+        `${HOST}/api/products?${query}&populate=*`, // Usando o populate para obter todas as informações
         {
             headers: {
-                "Authorization": `Bearer ${tokenStrapi}`,
+                "Authorization": `Bearer ${TOKEN_STRAPI}`,
             },
         }
     );
@@ -213,7 +217,8 @@ export const getFavoriteProducts = async (customer_email: string | undefined) =>
     return productsWithVariations as ProductsResponse[]; // Retornar produtos formatados como ProductsResponse
 }
 export const getHasFavoriteProduct = async (product_id: number, email: string | undefined): Promise<boolean> => {
-	const tokenStrapi = process.env.STRAPI_TOKEN;
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
 
 	const query = qs.stringify({
 		filters: {
@@ -230,10 +235,10 @@ export const getHasFavoriteProduct = async (product_id: number, email: string | 
 		},
 	});
 
-	const favoriteResponse = await fetch(`http://localhost:1337/api/favorites?${query}&populate=*`, {
+	const favoriteResponse = await fetch(`${HOST}/api/favorites?${query}&populate=*`, {
 		method: 'GET',
 		headers: {
-			"Authorization": `Bearer ${tokenStrapi}`,
+			"Authorization": `Bearer ${TOKEN_STRAPI}`,
 		},
 	});
 

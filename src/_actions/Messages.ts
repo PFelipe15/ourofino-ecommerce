@@ -32,10 +32,10 @@ export interface DefaultMessageProps {
 const getAllDefaultMessages = async () => {
   const token = process.env.STRAPI_TOKEN;
   if (!token) throw new Error("Token de API Strapi não encontrado");
-
+  const HOST = process.env.HOST;
   // Buscar produtos
   const messagesResponse = await fetch(
-    `http://localhost:1337/api/default-messages?populate=*`,
+    `${HOST}/api/default-messages?populate=*`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

@@ -3,14 +3,17 @@
 import { ProductsAllResponse, ProductsData } from "../../types/product-all-strape";
 import { ProductIdResponse } from "../../types/product-id-strape";
 
-export const getProductById = async (id: string | string[]) => {
-   
-  const token = process.env.STRAPI_TOKEN;
-  if (!token) throw new Error("Token de API Shopify não encontrado");
+ 
 
+export const getProductById = async (id: string | string[]) => {
+  const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+
+  if (!TOKEN_STRAPI) throw new Error("Token de API Shopify não encontrado");
+  if (!HOST) throw new Error("Host não encontrado");
   // Buscar produto
   const productResponse = await fetch(
-    `http://localhost:1337/api/products/${id}?populate=*`,
+    `${HOST}/api/products/${id}?populate=*`,
     {
       headers: {
         "X-Shopify-Access-Token": token,
@@ -25,7 +28,7 @@ export const getProductById = async (id: string | string[]) => {
     `http://localhost:1337/api/variations?populate=*`,
     {
       headers: {
-        "X-Shopify-Access-Token": token,
+        "X-Shopify-Access-Token": TOKEN_STRAPI,
       },
     }
   );
@@ -44,15 +47,18 @@ const productWithVariations = {
 };
 
 export const getAllProducts = async () => {
-    const token = process.env.STRAPI_TOKEN;
-    if (!token) throw new Error("Token de API Strapi não encontrado");
+  const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+
+    if (!TOKEN_STRAPI) throw new Error("Token de API Strapi não encontrado");
+    if (!HOST) throw new Error("Host não encontrado");
  
     // Buscar produtos
     const productsResponse = await fetch(
-     `http://localhost:1337/api/products?populate=*`,
+     `${HOST}/api/products?populate=*`,
      {
        headers: {
-          "Authorization": `Bearer ${token}`,
+          "Authorization": `Bearer ${TOKEN_STRAPI}`,
        },
      }
    );
@@ -94,14 +100,16 @@ export const getAllProducts = async () => {
  };
 
 export const getProductsByFilter = async (filter:string): Promise<ProductsData[]> => {
-    const token = process.env.STRAPI_TOKEN;
-  if (!token) throw new Error("Token de API Strapi não encontrado");
+  const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+  if (!TOKEN_STRAPI) throw new Error("Token de API Strapi não encontrado");
+  if (!HOST) throw new Error("Host não encontrado");
 
      const productsResponse = await fetch(
-   `http://localhost:1337/api/products?populate=*&${filter}`,
+   `${HOST}/api/products?populate=*&${filter}`,
    {
      headers: {
-        "Authorization": `Bearer ${token}`,
+        "Authorization": `Bearer ${TOKEN_STRAPI}`,
      },
    }
  );

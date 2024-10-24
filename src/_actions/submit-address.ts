@@ -16,16 +16,18 @@ interface UserData {
     };
 }
  
+
 export async function SubmitAddress(UserData: UserData | null | undefined) {
+    const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
   try{
     if (!UserData) {
         throw new Error("Dados de usuário ou endereço ausentes");
     }
-    const tokenStrapi = process.env.STRAPI_TOKEN;
-    const hasCliente = await fetch(`http://localhost:1337/api/customers?filters[email][$eq]=${UserData.email}`, {
+    const hasCliente = await fetch(`${HOST}/api/customers?filters[email][$eq]=${UserData.email}`, {
         method: 'GET',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
         },
     });
 
@@ -36,10 +38,10 @@ export async function SubmitAddress(UserData: UserData | null | undefined) {
     if (cliente.data.length > 0) {
          customerId = cliente.data[0].id;
      } else {
-         const customerResponse = await fetch('http://localhost:1337/api/customers', {
+         const customerResponse = await fetch(`${HOST}/api/customers`, {
             method: 'POST',
             headers: {
-                "Authorization": `Bearer ${tokenStrapi}`,
+                "Authorization": `Bearer ${TOKEN_STRAPI}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ data:{
@@ -61,10 +63,10 @@ export async function SubmitAddress(UserData: UserData | null | undefined) {
          customerId = newCustomer.data.id;
     }
     
-    const updateAddressCustomer = await fetch(`http://localhost:1337/api/customers/${customerId}`, {
+    const updateAddressCustomer = await fetch(`${HOST}/api/customers/${customerId}`, {
         method: 'PUT',
         headers: {
-            "Authorization": `Bearer ${tokenStrapi}`,
+            "Authorization": `Bearer ${TOKEN_STRAPI}`,
             "Content-Type": "application/json",
         },
         body: JSON.stringify({ data:{

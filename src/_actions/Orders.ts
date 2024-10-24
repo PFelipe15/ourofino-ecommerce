@@ -15,47 +15,42 @@ interface PayOrderProps {
 	total: number;
   }
 
-export const createOrder = async (order: Order, )=> {
- 	try {
-		const tokenStrapi = process.env.STRAPI_TOKEN;
-
-		const orderResponse = await fetch('http://localhost:1337/api/orders', {
+export const createOrder = async (order: Order) => {
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+	try {
+		const orderResponse = await fetch(`${HOST}/api/orders`, {
 			method: 'POST',
 			headers: {
-				"Authorization": `Bearer ${tokenStrapi}`,
+				"Authorization": `Bearer ${TOKEN_STRAPI}`, // Corrigido para usar TOKEN_STRAPI
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ data: order }) // Enviar os dados do cliente corretamente
+			body: JSON.stringify({ data: order })
 		});
 
- 
 		if (!orderResponse.ok) {
 			const errorData = await orderResponse.json();
 			console.error("Resposta completa:", JSON.stringify(errorData));
 			throw new Error(`Erro ao criar cliente: ${JSON.stringify(errorData)}`);
 		}
 
-		
 		const orderData = await orderResponse.json();
- 
-   
-        return orderData as OrderResponseProps;
+		return orderData as OrderResponseProps;
 	} catch (error: any) {
 		throw new Error("Erro ao criar pedido: " + error.message);
 	}
 };
 
 export const createItemsOrder = async (items: any, order_id: number) => {
- 
- 
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
 	try {
-		const tokenStrapi = process.env.STRAPI_TOKEN;
 		// Iterar sobre os itens e criar uma requisição para cada um
 		const order_ItemsPromises = items.map(async (item: any) => {
-			const order_ItemsResponse = await fetch('http://localhost:1337/api/order-items', {
+			const order_ItemsResponse = await fetch(`${HOST}/api/order-items`, {
 				method: 'POST',
 				headers: {
-					"Authorization": `Bearer ${tokenStrapi}`,
+					"Authorization": `Bearer ${TOKEN_STRAPI}`, // Corrigido para usar TOKEN_STRAPI
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({ 
@@ -85,157 +80,153 @@ export const createItemsOrder = async (items: any, order_id: number) => {
 		// Aguardar todas as promessas serem resolvidas
 		const order_ItemsData = await Promise.all(order_ItemsPromises);
 
-        return order_ItemsData;
+		return order_ItemsData;
 	} catch (error: any) {
 		throw new Error("Erro ao criar pedido: " + error.message);
 	}
 };
 
-export const UpdateOrder = async (orderId: number, dataUpdate:any) => {
+export const UpdateOrder = async (orderId: number, dataUpdate: any) => {
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
 	try {
-  const token = process.env.STRAPI_TOKEN;
+		const response = await fetch(`${HOST}/api/orders/${orderId}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+					'Authorization': `Bearer ${TOKEN_STRAPI}`, // Corrigido para usar TOKEN_STRAPI
+			},
+			body: JSON.stringify({
+				data: dataUpdate,
+			}),
+		});
 
-   const response = await fetch(`http://localhost:1337/api/orders/${orderId}`, {
-	method: 'PUT',
-	headers: {
-	  'Content-Type': 'application/json',
-	  'Authorization': `Bearer ${token}`, // Certifique-se de que o token está sendo passado corretamente
-	},
-	body: JSON.stringify({
-	  data:  dataUpdate ,
-	}),
-  });
+		if (!response.ok) {
+			throw new Error('Erro ao cancelar o pedido');
+		}
 
-  if (!response.ok) {
-	throw new Error('Erro ao cancelar o pedido');
-  }
+		const data = await response.json(); // Obtenha a resposta JSON
 
-  const data = await response.json(); // Obtenha a resposta JSON
-
- 
-} catch (error) {
-  console.error('Erro ao cancelar o pedido:', error);
-   
-}  
+	} catch (error) {
+		console.error('Erro ao cancelar o pedido:', error);
+	}
 };
 
-export  const getOrdersByCustomer = async (email: string) => {
-    const token = process.env.STRAPI_TOKEN;
-   
-    const orders = await fetch(
-        `http://localhost:1337/api/orders?filters[customer][email][$eq]=${email}`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
+export const getOrdersByCustomer = async (email: string) => {
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+	const orders = await fetch(
+		`${HOST}/api/orders?filters[customer][email][$eq]=${email}`,
+		{
+			headers: {
+				"Authorization": `Bearer ${TOKEN_STRAPI}`, // Corrigido para usar TOKEN_STRAPI
+			},
+		}
+	);
 
-    const data = await orders.json();
-    
-     const orderIds = data.data.map((order: { id: any; }) => order.id); // Acesso corrigido para data.data
-      const query = qs.stringify({
-      filters: {
-        order: {
-            id: {
-              $in:orderIds
-            }
-          }
-       
-      } 
-    }, {
-      encodeValuesOnly: true,
-    });
-    
+	const data = await orders.json();
+	const orderIds = data.data.map((order: { id: any; }) => order.id); // Acesso corrigido para data.data
+	const query = qs.stringify({
+		filters: {
+			order: {
+				id: {
+					$in:orderIds
+				}
+			}
+		} 
+	}, {
+		encodeValuesOnly: true,
+	});
+	
 
-    // Buscar os items_orders
-    const itemsOrdersResponse = await fetch(`http://localhost:1337/api/order-items?${query}&populate=*`, {
-        headers: {
-            "Authorization": `Bearer ${token}`,
-        },
-    });
+	// Buscar os items_orders
+	const itemsOrdersResponse = await fetch(`http://localhost:1337/api/order-items?${query}&populate=*`, {
+		headers: {
+			"Authorization": `Bearer ${TOKEN_STRAPI}`, // Corrigido para usar TOKEN_STRAPI
+		},
+	});
 
-    const itemsOrdersData = await itemsOrdersResponse.json();
-    // Juntar as orders com os items_orders
-    const ordersWithItems= data.data.map((order: { id: any; }) => { 
-         return {
-            ...order,
-            items: itemsOrdersData.data.filter((item: { attributes: { order: { data: { id: any; }; }; }; }) => item.attributes.order.data.id === order.id)
-        };
-    });
+	const itemsOrdersData = await itemsOrdersResponse.json();
+	// Juntar as orders com os items_orders
+	const ordersWithItems= data.data.map((order: { id: any; }) => { 
+		return {
+			...order,
+			items: itemsOrdersData.data.filter((item: { attributes: { order: { data: { id: any; }; }; }; }) => item.attributes.order.data.id === order.id)
+		};
+	});
 
-    return ordersWithItems || [];
+	return ordersWithItems || [];
 };
 
 export const payOrder = async ({ items, user, paymentMethod, shipmentCost, total }: PayOrderProps): Promise<{ sandbox_init_point: string | undefined; id: string | undefined; }> => {
-	try {	 
-	  console.log(paymentMethod)
-	  const preferenceBody:PreferenceCreateData = {
-		  body:{
-			  additional_info: "Ourofino - " + new Date().getFullYear(),
+	const HOST = process.env.HOST;
+	const TOKEN_STRAPI = process.env.STRAPI_TOKEN;
+	try {
+		const preferenceBody: PreferenceCreateData = {
+			body: {
+				additional_info: "Ourofino - " + new Date().getFullYear(),
 
-			  items: await Promise.all(items.map(async (item: any) => { // Adicionado await aqui
-				  return {
-					  id: item.id,
-					  title: item.attributes.name + " - " + item.selectedSize,
-					  description: item.attributes.name + " - " + item.selectedSize,
-					  quantity: item.quantity,
-					  unit_price: item.price,
-					  currency_id: "BRL",
-				  };
-			  })) ,
-			  payer: {
-				  email: user?.data.email,
-				  name: user?.data.first_name + ' ' + user?.data.last_name,
-				  address: {
-					  street_name: user?.data.address?.street,
-					  street_number: user?.data.address?.number,
-					  zip_code: user?.data.address?.zipCode,
-				  }
+				items: await Promise.all(items.map(async (item: any) => { // Adicionado await aqui
+					return {
+						id: item.id,
+						title: item.attributes.name + " - " + item.selectedSize,
+						description: item.attributes.name + " - " + item.selectedSize,
+						quantity: item.quantity,
+						unit_price: item.price,
+						currency_id: "BRL",
+					};
+				})) ,
+				payer: {
+					email: user?.data.email,
+					name: user?.data.first_name + ' ' + user?.data.last_name,
+					address: {
+						street_name: user?.data.address?.street,
+						street_number: user?.data.address?.number,
+						zip_code: user?.data.address?.zipCode,
+					}
 
-			  },				
-			  payment_methods: {
+				},				
+				payment_methods: {
 
-				  default_payment_method_id: paymentMethod,
-				   
+					default_payment_method_id: paymentMethod,
+					   
+					  
+				},
+				
+
+
+
+
+				shipments:{
+					cost: shipmentCost,
+					mode: "frete",
+				},
+				
+
+				statement_descriptor: "Ourofino - " + new Date().getFullYear(),
+
+
+				back_urls: {
+					success: 'https://localhost:3000/payment/success',
+					failure: 'https://localhost:3000/payment/pending',
+					pending: 'https://localhost:3000/payment/pending'
+				},
+					notification_url: 'https://localhost:3000/api/webhook',
+					auto_return: 'approved',
+				} 	
 				  
-			  },
-			  
-
-
-
-
-			  shipments:{
-				  cost: shipmentCost,
-				  mode: "frete",
-			  },
-			  
-
-			  statement_descriptor: "Ourofino - " + new Date().getFullYear(),
-
-
-			  back_urls: {
-				  success: 'https://localhost:3000/payment/success',
-				  failure: 'https://localhost:3000/payment/pending',
-				  pending: 'https://localhost:3000/payment/pending'
-			  },
-				  notification_url: 'https://localhost:3000/api/webhook',
-				  auto_return: 'approved',
-			  } 	
-				  
-	  }
+		}
    
-	  const response = await preference.create(preferenceBody);
+		const response = await preference.create(preferenceBody);
 
 
-	  return { sandbox_init_point: response.sandbox_init_point, id: response.id };  
+		return { sandbox_init_point: response.sandbox_init_point, id: response.id };  
 
-  } catch (error: any) {
-	  console.error('Erro ao criar pagamento:', error);
-	  if (error.response) {
-		  console.error('Resposta de erro da API:', error.response.data);
-	  }
-	  throw error;
-  }
+	} catch (error: any) {
+		console.error('Erro ao criar pagamento:', error);
+		if (error.response) {
+			console.error('Resposta de erro da API:', error.response.data);
+		}
+		throw error;
+	}
 }
- 

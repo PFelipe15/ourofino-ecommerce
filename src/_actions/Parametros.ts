@@ -3,9 +3,10 @@ import qs from 'qs'
 
 export const getParametroLoginRequeridoAtendimento = async (): Promise<boolean> => {
     const token = process.env.STRAPI_TOKEN;
-
+    const host = process.env.HOST;
+   
     if (!token) throw new Error("Token de API Strapi não encontrado");
-
+    if (!host) throw new Error("Host não encontrado");
 
 const query = qs.stringify({
     populate: '*',
@@ -18,7 +19,7 @@ const query = qs.stringify({
     encodeValuesOnly: true,
 });
 
-    const response = await fetch(`http://localhost:1337/api/parametros?${query}`, {
+    const response = await fetch(`${host}/api/parametros?${query}`, {
         headers: {
             "Authorization": `Bearer ${token}`,
         },
