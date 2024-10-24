@@ -1,9 +1,19 @@
 'use client'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { FaHeart, FaTruck } from 'react-icons/fa'
-import { ProductProps } from '../../../../types/product-type'
+import { FaHeart } from 'react-icons/fa'
 import { useState, useEffect, useMemo } from 'react';
+import { ProductsData } from '../../../../types/product-all-strape';
+import { useToast } from '@/hooks/use-toast';
+import { useCartStore } from '@/store/useCartStore';
+import { useUser } from '@clerk/nextjs';
+import { getHasFavoriteProduct, createFavoriteProduct, deleteFavoriteProduct } from '@/_actions/handleFavoriteProduct';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const classificacoes = {
   P: { min: 9, max: 18 },
@@ -11,43 +21,149 @@ const classificacoes = {
   G: { min: 25, max: 30 },
 };
 
-export default function ProductDetails({ product }: { product: ProductProps }) {
-  const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
+export default function ProductDetails({ product }: { product:ProductsData  }) {
+  const hasVariants = product.attributes.variants_price !== null;
+  const [selectedVariant, setSelectedVariant] = useState(hasVariants ? product.attributes.variants_price.variantes[0] : null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
-  const [selectedImage, setSelectedImage] = useState(product.images[0]?.src || '');
+  const [selectedImage, setSelectedImage] = useState(product.attributes.images.data[0].attributes.url || '');
   const [selectedClassificacao, setSelectedClassificacao] = useState('P');
   const [selectedSize, setSelectedSize] = useState('');
+  const [availableSizes, setAvailableSizes] = useState<{ [key: string]: number }>({});
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const { toast } = useToast();
+  const { addItem } = useCartStore();
+  const { user } = useUser();
 
   const filteredSizes = useMemo(() => {
-    return product.variants
-      .filter(variant => variant.option1 === selectedClassificacao)
-      .map(variant => variant.option2)
-      .filter((size, index, self) => self.indexOf(size) === index)
-      .sort((a, b) => parseInt(a) - parseInt(b));
-  }, [selectedClassificacao, product.variants]);
+    if (!hasVariants) return [];
+    const sizeRanges = classificacoes[selectedClassificacao as keyof typeof classificacoes];
+    return Array.from({ length: sizeRanges.max - sizeRanges.min + 1 }, (_, i) => (sizeRanges.min + i).toString());
+  }, [selectedClassificacao, hasVariants]);
 
   useEffect(() => {
-    const variant = product.variants.find(
-      v => v.option1 === selectedClassificacao && v.option2 === selectedSize
-    );
-    if (variant) {
-      setSelectedVariant(variant);
+    if (hasVariants) {
+      const sizeStock: { [key: string]: number } = {};
+      product.attributes.variants_price.variantes.forEach(variante => {
+        if (variante.classificacao === selectedClassificacao) {
+          variante.tamanhos_estoque.forEach(item => {
+            sizeStock[item.tamanho.toString()] = item.estoque;
+          });
+        }
+      });
+      setAvailableSizes(sizeStock);
+      setSelectedSize('');
     }
-  }, [selectedSize, selectedClassificacao, product.variants]);
+  }, [product, selectedClassificacao, hasVariants]);
+
+  useEffect(() => {
+    if (hasVariants) {
+      const variant = product.attributes.variants_price.variantes.find(
+        v => Number(v.tamanho_minimo) <= parseInt(selectedSize) && Number(v.tamanho_maximo) >= parseInt(selectedSize)
+      );
+      if (variant) {
+        setSelectedVariant(variant);
+      }
+    }
+  }, [selectedSize, selectedClassificacao, hasVariants]);
+
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      const hasFavorite = await getHasFavoriteProduct(product.id, user?.emailAddresses[0]?.emailAddress);
+      setIsFavorite(hasFavorite);
+    };
+
+    if (user?.emailAddresses[0]?.emailAddress) {
+      checkFavoriteStatus();
+    }
+  }, [product.id, user]);
 
   const handleSelectSize = (size: string) => {
-    setSelectedSize(size);
-    const variant = product.variants.find(
-      v => v.option1 === selectedClassificacao && v.option2 === size
-    );
-    if (variant) {
-      setSelectedVariant(variant);
+    if (hasVariants) {
+      if (availableSizes[size] && availableSizes[size] > 0) {
+        setSelectedSize(size);
+        const variant = product.attributes.variants_price.variantes.find(
+          v => Number(v.tamanho_minimo) <= parseInt(size) && Number(v.tamanho_maximo) >= parseInt(size)
+        );
+        if (variant) {
+          setSelectedVariant(variant);
+        }
+      } else {
+        toast({
+          title: "Tamanho indisponível",
+          description: "Este tamanho está fora de estoque no momento.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const handleQuantityChange = (amount: number) => {
     setQuantity(prevQuantity => Math.max(1, prevQuantity + amount));
+  };
+
+  const handleAddToCart = () => {
+    if (hasVariants && !selectedSize) {
+      toast({
+        title: "Tamanho não selecionado",
+        description: "Por favor, selecione um tamanho antes de adicionar ao carrinho.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const price = hasVariants ? selectedVariant!.preco : product.attributes.price_primary;
+    addItem(product, quantity, price, selectedSize);
+    toast({
+      title: "Produto adicionado",
+      description: `${product.attributes.name} foi adicionado ao seu carrinho.`,
+      variant: "default"
+    });
+  };
+
+  const handleToggleFavorite = async () => {
+    const email = user?.emailAddresses[0]?.emailAddress;
+
+    if (!email) {
+      console.error("Email do cliente não encontrado.");
+      return;
+    }
+
+    if (isFavorite) {
+      await deleteFavoriteProduct(product.id, email);
+      setIsFavorite(false);
+      toast({
+        title: "Removido dos favoritos",
+        description: `${product.attributes.name} foi removido dos seus favoritos.`,
+        variant: "default"
+      });
+    } else {
+      try {
+        const userSerialiedData = {
+          data:{
+            first_name: user?.firstName,
+            last_name: user?.lastName,
+            email: user?.emailAddresses[0]?.emailAddress,       
+            phone: user?.phoneNumbers[0]?.phoneNumber,            
+          }
+        }
+        await createFavoriteProduct(product.id, userSerialiedData);
+        setIsFavorite(true);
+        toast({
+          title: "Adicionado aos favoritos",
+          description: `${product.attributes.name} foi adicionado aos seus favoritos.`,
+          variant: "default"
+        });
+      } catch (error) {
+        console.error("Erro ao criar favorito:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível adicionar aos favoritos. Tente novamente.",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   return (
@@ -63,7 +179,7 @@ export default function ProductDetails({ product }: { product: ProductProps }) {
             {selectedImage && (
               <Image
                 src={selectedImage}
-                alt={product.title}
+                alt={product.attributes.name}
                 layout="fill"
                 objectFit="cover"
                 className="rounded-lg shadow-lg"
@@ -71,70 +187,82 @@ export default function ProductDetails({ product }: { product: ProductProps }) {
             )}
           </div>
           <div className="flex gap-2 overflow-x-auto">
-            {product.images && product.images.map((image, index) => (
+            {product.attributes.images.data.map((image, index) => (
               <Image
                 key={image.id}
-                src={image.src}
-                alt={`${product.title} - Imagem ${index + 1}`}
+                src={image.attributes.url}
+                alt={`${product.attributes.name} - Imagem ${index + 1}`}
                 width={100}
                 height={100}
                 className="rounded cursor-pointer hover:opacity-75 transition-opacity"
-                onClick={() => setSelectedImage(image.src)}
+                onClick={() => setSelectedImage(image.attributes.url)}
               />
             ))}
           </div>
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold mb-2">{product.title}</h1>
-          <p className="text-gray-600 mb-4">{product.vendor}</p>
+          <h1 className="text-3xl font-bold mb-2">{product.attributes.name}</h1>
+          {product.attributes.hot && (
+            <div className="bg-yellow-200 text-yellow-800 p-2 rounded mb-4">
+              Produto em Destaque!
+            </div>
+          )}
+          <p className="text-gray-600 mb-4">{product.attributes.collection.data.attributes.name}</p>
 
           <div className="mb-4">
             <span className="text-3xl font-bold text-primary">
-              R$ {parseFloat(selectedVariant.price).toFixed(2)}
+              R$ {hasVariants ? selectedVariant?.preco : product.attributes.price_primary}
             </span>
           </div>
 
-          <div className="mb-4">
-            <p className="text-gray-700 mb-4 flex items-center">
-              <FaTruck className="mr-2" />
-              {selectedVariant.inventory_quantity > 0 ? 'Em estoque' : 'Indisponível'}
-            </p>
-          </div>
+          {hasVariants && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Classificação
+                </label>
+                <div className="flex space-x-2">
+                  {Object.keys(classificacoes).map((classificacao) => (
+                    <button
+                      key={classificacao}
+                      onClick={() => setSelectedClassificacao(classificacao)}
+                      className={`px-3 py-1 rounded-full ${selectedClassificacao === classificacao ? 'bg-black text-white' : 'bg-gray-200 text-gray-700'}`}
+                    >
+                      {classificacao}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Classificação
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(classificacoes).map((classificacao) => (
-                <button
-                  key={classificacao}
-                  onClick={() => setSelectedClassificacao(classificacao)}
-                  className={`px-4 py-2 border rounded-md ${selectedClassificacao === classificacao ? 'bg-black text-white' : 'bg-white text-black'}`}
-                >
-                  {classificacao}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tamanho do anel
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {filteredSizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => handleSelectSize(size)}
-                  className={`px-4 py-2 border rounded-md ${selectedSize === size ? 'bg-black text-white' : 'bg-white text-black'}`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tamanho do anel
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {filteredSizes.map((size) => {
+                    const isAvailable = availableSizes[size] && availableSizes[size] > 0;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => isAvailable && handleSelectSize(size)}
+                        className={`px-4 py-2 border rounded-md ${
+                          selectedSize === size
+                            ? 'bg-black text-white'
+                            : isAvailable
+                            ? 'bg-white text-black'
+                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        }`}
+                        disabled={!isAvailable}
+                      >
+                        {size}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -156,13 +284,27 @@ export default function ProductDetails({ product }: { product: ProductProps }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="bg-primary text-white flex-grow py-3 rounded-md font-bold flex items-center justify-center"
-              disabled={selectedVariant.inventory_quantity === 0}
+              onClick={handleAddToCart}
             >
               ADICIONAR À SACOLA
             </motion.button>
-            <button className="border border-gray-300 rounded-md p-3">
-              <FaHeart className="text-gray-400" />
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <motion.button 
+                    className={`p-3 rounded-full shadow-md ${isFavorite ? 'bg-primary' : 'bg-gray-200'}`}
+                    onClick={handleToggleFavorite}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <FaHeart size={20} className={`transition-colors duration-300 ${isFavorite ? 'text-white' : 'text-gray-400'}`} />
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="mb-6">
@@ -182,12 +324,15 @@ export default function ProductDetails({ product }: { product: ProductProps }) {
             </div>
             <div className="mt-4">
               {activeTab === 'description' && (
-                <div dangerouslySetInnerHTML={{ __html: product.body_html }} className="prose max-w-none" />
+                <div dangerouslySetInnerHTML={{ __html: product.attributes.description }} className="prose max-w-none" />
               )}
               {activeTab === 'specifications' && (
-                <div>
-                  <p><strong>Tipo de Produto:</strong> {product.product_type}</p>
-                  {/* Adicione mais especificações conforme necessário */}
+                <div className="space-y-2">
+                  <p><strong>Tipo de Produto:</strong> {product.attributes.collection.data.attributes.name}</p>
+                  <p><strong>Peso:</strong> {product.attributes.peso} g</p>
+                  <p><strong>Altura:</strong> {product.attributes.altura} cm</p>
+                  <p><strong>Largura:</strong> {product.attributes.largura} cm</p>
+                  <p><strong>Comprimento:</strong> {product.attributes.comprimento} cm</p>
                 </div>
               )}
             </div>

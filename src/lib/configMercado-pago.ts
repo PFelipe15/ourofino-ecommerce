@@ -16,6 +16,7 @@ const cardToken = new CardToken(client);
 
 const customer = new Customer(client);
 
+paymentMethod.get();
  
 
 export  {payment, preference, cardToken, paymentMethod, customer};

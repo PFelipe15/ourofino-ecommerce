@@ -9,6 +9,18 @@ const nextConfig = {
             {
                 hostname: 'cdn.shopify.com',
                 
+            },
+            {
+                hostname:'localhost'
+            },
+            {
+                hostname: 'www.mercadopago.com',
+                
+            },{
+                hostname: 'http2.mlstatic.com',
+            },
+            {
+                hostname: 'sandbox.melhorenvio.com.br',
             }
         ]
     }

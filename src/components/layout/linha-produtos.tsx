@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 export default function LinhaProdutos() {
   return (
-    <div className="container mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
+    <div className="container mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl" id="colecoes">
       {[
         {
           src: "./linha-classic.webp",

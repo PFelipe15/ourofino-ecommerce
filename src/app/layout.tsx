@@ -13,7 +13,10 @@ import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: "Ourofino - Alianças ",
-  description: "Loja de aliançãs",
+  description: "Loja de alianças e jóias",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -28,8 +31,8 @@ export default function RootLayout({
       <html lang="en">
 
         <body className={inter.className}>
-      <Header />
-      <Toaster />
+          <Header />
+              <Toaster />
 
           {children}
         </body>

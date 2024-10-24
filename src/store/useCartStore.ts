@@ -1,87 +1,96 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import CryptoJS from 'crypto-js'
-import { ProductProps } from '../../types/product-type'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { ProductsData } from '../../types/product-all-strape';
 
-export interface CartItem extends Omit<ProductProps, 'variants'> {
+export interface CartItem  {
+  id:number
+  attributes:ProductsData['attributes']
   quantity: number;
   selectedSize: string;
-  price: string; // Preço da variante selecionada
-  variant: ProductProps['variants'][0]; // A variante selecionada
+  price: number | undefined; 
+  subtotal: number | undefined;
 }
 
 interface CartStore {
   items: CartItem[];
-  addItem: (item: ProductProps, quantity: number, selectedSize: string) => void;
+  step: number;
+  addItem: (product: ProductsData, quantity: number, price:number | undefined, selectedSize: string) => void;
   removeItem: (id: number, selectedSize: string) => void;
   clearCart: () => void;
   increaseQuantity: (id: number, selectedSize: string) => void;
   decreaseQuantity: (id: number, selectedSize: string) => void;
   updateItemSize: (itemId: number, oldSize: string, newSize: string) => void;
+  setStep: (step: number) => void;
+  resetStep: () => void;
+  resetCart: () => void;
+  isOrderCompleted: boolean;
+  setOrderCompleted: (completed: boolean) => void;
+  clearLocalStorage: () => void;
+  forceReset: () => void;
 }
 
-const SECRET_KEY = 'sua_chave_secreta_muito_longa_e_complexa'
-
-const encryptData = (data: any) => {
-  return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString()
-}
-
-const decryptData = (encryptedData: string) => {
-  const bytes = CryptoJS.AES.decrypt(encryptedData, SECRET_KEY)
-  return JSON.parse(bytes.toString(CryptoJS.enc.Utf8))
-}
+ 
+ 
 
 export const useCartStore = create(
   persist<CartStore>(
-    (set) => ({
+    (set, get) => ({
       items: [],
-      addItem: (item, quantity, selectedSize) => set((state) => {
-        const selectedVariant = item.variants.find(v => v.option2 === selectedSize);
-        if (!selectedVariant) {
-          console.error("Variante não encontrada");
-          return state;
-        }
-
-        const newItem: CartItem = {
-          ...item,
-          quantity,
-          selectedSize,
-          price: selectedVariant.price,
-          variant: selectedVariant,
-        };
-
+      step: 0,
+      addItem: (item, quantity, price, selectedSize) => set((state) => {
         const existingItemIndex = state.items.findIndex(
-          (i) => i.id === item.id && i.selectedSize === selectedSize
+          (cartItem) => cartItem.id === item.id && cartItem.selectedSize === selectedSize
         );
-        
-        if (existingItemIndex > -1) {
-          const newItems = [...state.items];
-          newItems[existingItemIndex].quantity += quantity;
-          return { items: newItems };
+
+        let updatedItems;
+        if (existingItemIndex !== -1) {
+          updatedItems = [...state.items];
+          updatedItems[existingItemIndex].quantity += quantity;
+          updatedItems[existingItemIndex].subtotal = updatedItems[existingItemIndex].price * updatedItems[existingItemIndex].quantity;
+        } else {
+          const newItem: CartItem = {
+            ...item,
+            quantity,
+            selectedSize,
+            price: price ?? 0,
+            subtotal: (price ?? 0) * quantity,
+          };
+          updatedItems = [...state.items, newItem];
         }
-        
-        return { 
-          items: [...state.items, newItem] 
-        };
+
+        // Resetar o step quando um novo item é adicionado
+        return { items: updatedItems, step: 0 };
       }),
       removeItem: (id: number, selectedSize: string) => set((state) => ({
         items: state.items.filter((item) => !(item.id === id && item.selectedSize === selectedSize)),
       })),
       clearCart: () => set({ items: [] }),
-      increaseQuantity: (id: number, selectedSize: string) => set((state) => ({
-        items: state.items.map((item) =>
+      increaseQuantity: (id: number, selectedSize: string) => set((state) => {
+        const updatedItems = state.items.map((item) =>
           item.id === id && item.selectedSize === selectedSize
-            ? { ...item, quantity: item.quantity + 1 }
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+                subtotal: item.price * (item.quantity + 1), // Atualiza o subtotal
+              }
             : item
-        ),
-      })),
-      decreaseQuantity: (id: number, selectedSize: string) => set((state) => ({
-        items: state.items.map((item) =>
-          item.id === id && item.selectedSize === selectedSize && item.quantity > 1
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        ).filter((item) => item.quantity > 0),
-      })),
+        );
+        return { items: updatedItems };
+      }),
+      decreaseQuantity: (id: number, selectedSize: string) => set((state) => {
+        const updatedItems = state.items.map((item) => {
+          if (item.id === id && item.selectedSize === selectedSize && item.quantity > 1) {
+            const newQuantity = item.quantity - 1;
+            return {
+              ...item,
+              quantity: newQuantity,
+              subtotal: item.price * newQuantity, // Atualiza o subtotal
+            };
+          }
+          return item;
+        }).filter((item) => item.quantity > 0);
+        return { items: updatedItems };
+      }),
       updateItemSize: (itemId: number, oldSize: string, newSize: string) => set((state) => {
         const itemIndex = state.items.findIndex(item => item.id === itemId && item.selectedSize === oldSize)
         if (itemIndex === -1) return state
@@ -103,19 +112,28 @@ export const useCartStore = create(
 
         return { items: newItems }
       }),
+      setStep: (step: number) => set({ step }),
+      resetStep: () => {
+         set({ step: 0 });
+      },
+      resetCart: () => {
+        set({ items: [], step: 0, isOrderCompleted: false }, true)
+        get().clearLocalStorage()
+      },
+      isOrderCompleted: false,
+      setOrderCompleted: (completed) => set({ isOrderCompleted: completed }),
+      clearLocalStorage: () => {
+        localStorage.removeItem('cart-storage')
+      },
+      forceReset: () => {
+        set({ items: [], step: 0, isOrderCompleted: false }, true)
+        get().clearLocalStorage()
+        window.location.reload() // Força o recarregamento da página
+      },
     }),
     {
       name: 'cart-storage',
-      storage: {
-        getItem: (name) => {
-          const storedData = localStorage.getItem(name)
-          return storedData ? JSON.parse(storedData) : null
-        },
-        setItem: (name, value) => {
-          localStorage.setItem(name, JSON.stringify(value))
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
+      storage: createJSONStorage(() => localStorage),
     }
   )
 )

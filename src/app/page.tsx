@@ -5,8 +5,8 @@ import { FaShippingFast, FaCreditCard, FaWhatsapp, FaMedal, FaUserShield, FaCog 
 import { MdSupportAgent } from 'react-icons/md';
 import BannerMain from "@/components/layout/banner";
 import Footer from "@/components/layout/footer";
-import ChatBox from "@/components/layout/chatbox-cliente";
- import FeaturedProducts from "@/components/layout/store/featured-products";
+import ChatBox from "@/components/layout/chatbox/chat";
+import GroupProducts from "@/components/layout/store/groups-products";
 import LinhaProdutos from "@/components/layout/linha-produtos";
 
 export default function Home() {
@@ -14,8 +14,6 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center min-h-screen bg-gray-50 text-gray-800">       
       <BannerMain />
-
-  
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -52,11 +50,13 @@ export default function Home() {
           ))}
         </div>
       </motion.div>
-     
-      <FeaturedProducts />
-       <LinhaProdutos />
 
-       <FeaturedProducts   />
+      <GroupProducts title="Produtos em destaque" slug="destaque" id="destaque" />
+       <LinhaProdutos />
+ 
+       <GroupProducts title="Promoções"  slug="promocoes"  id="promocoes" />
+
+ 
 
        <motion.div
         initial={{ x: -100, opacity: 0 }}
@@ -87,18 +87,16 @@ export default function Home() {
       </motion.div>
 
       <ChatBox/>
-
-      {/* Seção de Nossos Diferenciais */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-white mt-12 p-8 rounded-lg shadow-md w-full max-w-4xl"
+        className="bg-white mt-12 p-8 rounded-lg shadow-md w-screen  "
       >
         <h3 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Nossos Diferenciais
         </h3>
-        <div className="flex justify-between items-center text-center">
+        <div className="flex justify-between items-center text-center flex-col md:flex-row">
           {[
             {
               icon: <FaMedal className="text-primary text-3xl mx-auto mb-2" />,
@@ -128,7 +126,7 @@ export default function Home() {
           ))}
         </div>
       </motion.div>
-      <FeaturedProducts  />
+      <GroupProducts title="News" slug="novos" id="novidades" />
 
        <Footer />
     </main>
